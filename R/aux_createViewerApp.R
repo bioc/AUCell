@@ -24,7 +24,8 @@ AUCell_createViewerApp <- function(auc, thresholds=NULL, tSNE=NULL,
   if(class(auc)!="aucellResults") stop("Please provide an aucellResults object.")
   if(is.null(thresholds)) thresholds <- setNames(rep(0, nrow(auc)), rownames(auc))
   
-  tSNE.df <- data.frame(tSNE, cell=rownames(tSNE), t(getAUC(auc)[,rownames(tSNE)]))
+  commonCells <- as.character(intersect(colnames(auc), rownames(tSNE)))
+  tSNE.df <- data.frame(tSNE[commonCells,,drop=FALSE], cell=commonCells, t(getAUC(auc)[,commonCells, drop=FALSE]), stringsAsFactors=FALSE)
   #colnames(tSNE.df)[which(!colnames(tSNE.df) %in% c("tsne1", "tsne2", "cell", rownames(auc)))] # to add other props?
   
   app <- list()
@@ -189,7 +190,6 @@ AUCell_createViewerApp <- function(auc, thresholds=NULL, tSNE=NULL,
         {
           plot.new()
         }else{
-          print(input$geneExpression)
           if(input$geneExpression %in% rownames(exprMat))
           {
             .auc_plotGradientTsne(tSNE, 
@@ -228,12 +228,12 @@ AUCell_createViewerApp <- function(auc, thresholds=NULL, tSNE=NULL,
         rbokeh::tool_lasso_select(callback = rbokeh::shiny_callback(id="cellsSelected"), "cells")
     })
     
-    output$cellSelectedTable <- DT::renderDataTable({
-      data.frame("Cells selected"= rownames(tSNE)[input$cellsSelected])
-    })
+    # output$cellSelectedTable <- DT::renderDataTable({
+    #   data.frame("Cells selected"= rownames(tSNE)[input$cellsSelected])
+    # })
     
     output$cellSelectedText <- renderText({
-      paste("Cells selected:\n", paste(rownames(tSNE)[input$cellsSelected], collapse="\n"), sep="")
+      paste("Cells selected:\n", paste(rownames(tSNE)[input$cellsSelected+1], collapse="\n"), sep="")
     })
     
     # Save thresholds
@@ -242,7 +242,7 @@ AUCell_createViewerApp <- function(auc, thresholds=NULL, tSNE=NULL,
       message(input$geneSet, " threshold replaced by ", app$thresholds[input$geneSet] )
     })
     observeEvent(input$saveCells, {
-      app$cells[[input$cellGroupName]] <<- list(rownames(tSNE)[input$cellsSelected])
+      app$cells[[input$cellGroupName]] <<- list(rownames(tSNE)[input$cellsSelected+1])
       message("Selected cells (", input$cellGroupName,"): ", app$cells[[input$cellGroupName]])
       if(grepl("group([[:digit:]]+)", input$cellGroupName)) {
         updateTextInput(session,
